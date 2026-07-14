@@ -1,0 +1,1319 @@
+openapi: 3.0.3
+info:
+  title: PlaceTrack API
+  description: >
+    REST API for PlaceTrack — a campus placement portal connecting the
+    institute's placement cell (Admin), recruiting Companies, and Students.
+    All endpoints are prefixed with /api and use JWT bearer authentication
+    (obtained via /auth/login or /auth/register/*).
+  version: "1.0.0"
+  contact:
+    name: PlaceTrack
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Registration and unified login for all roles
+  - name: Student
+    description: Student profile, drive browsing, applications, exports
+  - name: Company
+    description: Company profile, drive management, applicant review
+  - name: Admin
+    description: Placement-cell moderation, approvals, reports
+  - name: Common
+    description: Shared endpoints available to any authenticated role
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------------
+  # AUTH
+  # ---------------------------------------------------------------------
+  /auth/register/student:
+    post:
+      tags: [Auth]
+      summary: Register a new student account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, roll_number, branch, graduation_year, cgpa]
+              properties:
+                name: { type: string, example: Asha Rao }
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 8 }
+                roll_number: { type: string, example: CS2023001 }
+                branch: { type: string, example: Computer Science }
+                graduation_year: { type: integer, example: 2026 }
+                cgpa: { type: number, format: float, example: 8.7 }
+                phone: { type: string }
+                skills: { type: string, example: "Python, SQL, React" }
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+                  profile: { $ref: '#/components/schemas/StudentProfile' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Email or roll number already registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/register/company:
+    post:
+      tags: [Auth]
+      summary: Register a new company account (pending admin approval)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hr_contact_name, email, password, company_name, hr_contact_email]
+              properties:
+                company_name: { type: string, example: Acme Robotics }
+                hr_contact_name: { type: string, example: Priya Nair }
+                hr_contact_email: { type: string, format: email }
+                email: { type: string, format: email, description: Login email }
+                password: { type: string, format: password, minLength: 8 }
+                hr_phone: { type: string }
+                website: { type: string }
+                industry: { type: string }
+                description: { type: string }
+      responses:
+        '201':
+          description: Account created, pending approval
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+                  profile: { $ref: '#/components/schemas/CompanyProfile' }
+                  notice: { type: string }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Unified login for admin, student, and company accounts
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+                  profile:
+                    oneOf:
+                      - { $ref: '#/components/schemas/StudentProfile' }
+                      - { $ref: '#/components/schemas/CompanyProfile' }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Account deactivated or blacklisted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get the current authenticated user and profile
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  profile:
+                    oneOf:
+                      - { $ref: '#/components/schemas/StudentProfile' }
+                      - { $ref: '#/components/schemas/CompanyProfile' }
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------------
+  # STUDENT
+  # ---------------------------------------------------------------------
+  /student/profile:
+    get:
+      tags: [Student]
+      summary: Get the current student's profile
+      responses:
+        '200':
+          description: Student profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile: { $ref: '#/components/schemas/StudentProfile' }
+    put:
+      tags: [Student]
+      summary: Update the current student's profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                branch: { type: string }
+                graduation_year: { type: integer }
+                cgpa: { type: number }
+                phone: { type: string }
+                skills: { type: string }
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile: { $ref: '#/components/schemas/StudentProfile' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /student/profile/resume:
+    post:
+      tags: [Student]
+      summary: Upload/replace the student's resume (PDF/DOC/DOCX, max 5MB)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [resume]
+              properties:
+                resume:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Resume uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile: { $ref: '#/components/schemas/StudentProfile' }
+                  message: { type: string }
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    get:
+      tags: [Student]
+      summary: Download the student's own resume
+      responses:
+        '200':
+          description: Resume file
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        '404':
+          description: No resume uploaded yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /student/dashboard:
+    get:
+      tags: [Student]
+      summary: Student dashboard stats and upcoming deadlines
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_applications: { type: integer }
+                  status_breakdown: { type: object, additionalProperties: { type: integer } }
+                  resume_on_file: { type: boolean }
+                  upcoming_deadlines:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlacementDrive' }
+
+  /student/drives:
+    get:
+      tags: [Student]
+      summary: Browse currently open, approved placement drives (cached)
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Search by job title or company name
+        - in: query
+          name: eligible_only
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Drive listing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drives:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlacementDrive' }
+                  count: { type: integer }
+
+  /student/drives/{drive_id}:
+    get:
+      tags: [Student]
+      summary: Get a single approved drive's details
+      parameters:
+        - $ref: '#/components/parameters/DriveId'
+      responses:
+        '200':
+          description: Drive details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drive: { $ref: '#/components/schemas/PlacementDrive' }
+        '404':
+          description: Drive not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /student/drives/{drive_id}/apply:
+    post:
+      tags: [Student]
+      summary: Apply to a placement drive
+      parameters:
+        - $ref: '#/components/parameters/DriveId'
+      responses:
+        '201':
+          description: Application created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application: { $ref: '#/components/schemas/Application' }
+        '400':
+          description: Drive not open for applications
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Not eligible for this drive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Already applied to this drive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /student/applications:
+    get:
+      tags: [Student]
+      summary: List the student's own applications
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [applied, shortlisted, interview_scheduled, selected, rejected]
+      responses:
+        '200':
+          description: Applications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items: { $ref: '#/components/schemas/Application' }
+
+  /student/history:
+    get:
+      tags: [Student]
+      summary: List the student's placement history (selected applications)
+      responses:
+        '200':
+          description: Placement history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  history:
+                    type: array
+                    items: { $ref: '#/components/schemas/Application' }
+
+  /student/applications/{application_id}/offer-letter:
+    get:
+      tags: [Student]
+      summary: Download the offer letter PDF for a selected application
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Offer letter PDF
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        '404':
+          description: No offer letter generated yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /student/export:
+    post:
+      tags: [Student]
+      summary: Trigger an async CSV export of the student's application history
+      responses:
+        '202':
+          description: Export job started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: { type: string }
+                  message: { type: string }
+
+  /student/export/status/{task_id}:
+    get:
+      tags: [Student]
+      summary: Poll the status of a CSV export job
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskStatus' }
+
+  /student/export/download/{filename}:
+    get:
+      tags: [Student]
+      summary: Download a completed CSV export
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv: { schema: { type: string, format: binary } }
+
+  # ---------------------------------------------------------------------
+  # COMPANY
+  # ---------------------------------------------------------------------
+  /company/profile:
+    get:
+      tags: [Company]
+      summary: Get the current company's profile
+      responses:
+        '200':
+          description: Company profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile: { $ref: '#/components/schemas/CompanyProfile' }
+    put:
+      tags: [Company]
+      summary: Update the current company's profile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hr_contact_name: { type: string }
+                hr_contact_email: { type: string }
+                hr_phone: { type: string }
+                website: { type: string }
+                industry: { type: string }
+                description: { type: string }
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile: { $ref: '#/components/schemas/CompanyProfile' }
+
+  /company/dashboard:
+    get:
+      tags: [Company]
+      summary: Company dashboard stats (drives, applicants, selections)
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  approval_status: { type: string }
+                  total_drives: { type: integer }
+                  total_applicants: { type: integer }
+                  total_selected: { type: integer }
+                  drives:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlacementDrive' }
+
+  /company/drives:
+    post:
+      tags: [Company]
+      summary: Create a new placement drive (requires admin-approved company)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [job_title, job_description, eligible_branches, eligible_years, application_deadline]
+              properties:
+                job_title: { type: string }
+                job_description: { type: string }
+                eligible_branches:
+                  type: array
+                  items: { type: string }
+                eligible_years:
+                  type: array
+                  items: { type: integer }
+                min_cgpa: { type: number }
+                package_lpa: { type: number }
+                location: { type: string }
+                application_deadline: { type: string, format: date }
+                drive_date: { type: string, format: date }
+      responses:
+        '201':
+          description: Drive submitted for approval
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drive: { $ref: '#/components/schemas/PlacementDrive' }
+                  message: { type: string }
+        '403':
+          description: Company not yet approved by admin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    get:
+      tags: [Company]
+      summary: List the company's own drives
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected, closed]
+      responses:
+        '200':
+          description: Drive list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drives:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlacementDrive' }
+
+  /company/drives/{drive_id}:
+    put:
+      tags: [Company]
+      summary: Edit a drive (only while still pending approval)
+      parameters:
+        - $ref: '#/components/parameters/DriveId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                job_title: { type: string }
+                job_description: { type: string }
+                location: { type: string }
+                package_lpa: { type: number }
+                min_cgpa: { type: number }
+                eligible_branches: { type: array, items: { type: string } }
+                eligible_years: { type: array, items: { type: integer } }
+                application_deadline: { type: string, format: date }
+      responses:
+        '200':
+          description: Updated drive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drive: { $ref: '#/components/schemas/PlacementDrive' }
+        '400':
+          description: Drive is no longer pending, or invalid data
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /company/drives/{drive_id}/close:
+    post:
+      tags: [Company]
+      summary: Manually close a drive
+      parameters:
+        - $ref: '#/components/parameters/DriveId'
+      responses:
+        '200':
+          description: Drive closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drive: { $ref: '#/components/schemas/PlacementDrive' }
+
+  /company/drives/{drive_id}/applicants:
+    get:
+      tags: [Company]
+      summary: List applicants for a drive
+      parameters:
+        - $ref: '#/components/parameters/DriveId'
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [applied, shortlisted, interview_scheduled, selected, rejected]
+      responses:
+        '200':
+          description: Applicant list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drive: { $ref: '#/components/schemas/PlacementDrive' }
+                  applicants:
+                    type: array
+                    items: { $ref: '#/components/schemas/Application' }
+
+  /company/applications/{application_id}/status:
+    put:
+      tags: [Company]
+      summary: Update an application's status (shortlist -> interview -> select/reject)
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [shortlisted, interview_scheduled, selected, rejected]
+                remarks: { type: string }
+                interview_datetime:
+                  type: string
+                  format: date-time
+                  description: Required when status = interview_scheduled
+      responses:
+        '200':
+          description: Updated application
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application: { $ref: '#/components/schemas/Application' }
+        '400':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Application does not belong to this company
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /company/applications/{application_id}/offer-letter:
+    post:
+      tags: [Company]
+      summary: Generate an offer letter PDF for a selected candidate
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Offer letter generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application: { $ref: '#/components/schemas/Application' }
+                  message: { type: string }
+        '400':
+          description: Candidate is not marked as selected
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    get:
+      tags: [Company]
+      summary: Download a generated offer letter PDF
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      responses:
+        '200':
+          description: Offer letter PDF
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        '404':
+          description: No offer letter generated yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------------
+  # ADMIN
+  # ---------------------------------------------------------------------
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Institute-wide stats (cached)
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_students: { type: integer }
+                  total_companies: { type: integer }
+                  approved_companies: { type: integer }
+                  pending_companies: { type: integer }
+                  total_drives: { type: integer }
+                  pending_drives: { type: integer }
+                  approved_drives: { type: integer }
+                  total_applications: { type: integer }
+                  total_selected: { type: integer }
+                  students_by_branch: { type: object, additionalProperties: { type: integer } }
+
+  /admin/companies:
+    get:
+      tags: [Admin]
+      summary: List/search companies
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [pending, approved, rejected] }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        '200':
+          description: Company list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  companies:
+                    type: array
+                    items: { $ref: '#/components/schemas/CompanyProfile' }
+
+  /admin/companies/{company_id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve a pending company
+      parameters: [{ $ref: '#/components/parameters/CompanyId' }]
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { company: { $ref: '#/components/schemas/CompanyProfile' } }
+
+  /admin/companies/{company_id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject a pending company
+      parameters: [{ $ref: '#/components/parameters/CompanyId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { reason: { type: string } }
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { company: { $ref: '#/components/schemas/CompanyProfile' } }
+
+  /admin/companies/{company_id}/blacklist:
+    post:
+      tags: [Admin]
+      summary: Blacklist a company
+      parameters: [{ $ref: '#/components/parameters/CompanyId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { reason: { type: string } }
+      responses:
+        '200':
+          description: Blacklisted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { company: { $ref: '#/components/schemas/CompanyProfile' } }
+
+  /admin/companies/{company_id}/reactivate:
+    post:
+      tags: [Admin]
+      summary: Reactivate / un-blacklist a company
+      parameters: [{ $ref: '#/components/parameters/CompanyId' }]
+      responses:
+        '200':
+          description: Reactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { company: { $ref: '#/components/schemas/CompanyProfile' } }
+
+  /admin/companies/{company_id}/deactivate:
+    post:
+      tags: [Admin]
+      summary: Deactivate a company account
+      parameters: [{ $ref: '#/components/parameters/CompanyId' }]
+      responses:
+        '200':
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { company: { $ref: '#/components/schemas/CompanyProfile' } }
+
+  /admin/students:
+    get:
+      tags: [Admin]
+      summary: List/search students
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: branch
+          schema: { type: string }
+      responses:
+        '200':
+          description: Student list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  students:
+                    type: array
+                    items: { $ref: '#/components/schemas/StudentProfile' }
+
+  /admin/students/{student_id}/blacklist:
+    post:
+      tags: [Admin]
+      summary: Blacklist a student
+      parameters: [{ $ref: '#/components/parameters/StudentId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { reason: { type: string } }
+      responses:
+        '200':
+          description: Blacklisted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { student: { $ref: '#/components/schemas/StudentProfile' } }
+
+  /admin/students/{student_id}/reactivate:
+    post:
+      tags: [Admin]
+      summary: Reactivate / un-blacklist a student
+      parameters: [{ $ref: '#/components/parameters/StudentId' }]
+      responses:
+        '200':
+          description: Reactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { student: { $ref: '#/components/schemas/StudentProfile' } }
+
+  /admin/students/{student_id}/deactivate:
+    post:
+      tags: [Admin]
+      summary: Deactivate a student account
+      parameters: [{ $ref: '#/components/parameters/StudentId' }]
+      responses:
+        '200':
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { student: { $ref: '#/components/schemas/StudentProfile' } }
+
+  /admin/drives:
+    get:
+      tags: [Admin]
+      summary: List all placement drives
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [pending, approved, rejected, closed] }
+      responses:
+        '200':
+          description: Drive list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drives:
+                    type: array
+                    items: { $ref: '#/components/schemas/PlacementDrive' }
+
+  /admin/drives/{drive_id}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve a pending drive
+      parameters: [{ $ref: '#/components/parameters/DriveId' }]
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { drive: { $ref: '#/components/schemas/PlacementDrive' } }
+
+  /admin/drives/{drive_id}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject a pending drive
+      parameters: [{ $ref: '#/components/parameters/DriveId' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { reason: { type: string } }
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { drive: { $ref: '#/components/schemas/PlacementDrive' } }
+
+  /admin/search:
+    get:
+      tags: [Admin]
+      summary: Global search across students, companies, and drives
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  students: { type: array, items: { $ref: '#/components/schemas/StudentProfile' } }
+                  companies: { type: array, items: { $ref: '#/components/schemas/CompanyProfile' } }
+                  drives: { type: array, items: { $ref: '#/components/schemas/PlacementDrive' } }
+
+  /admin/reports/monthly:
+    get:
+      tags: [Admin]
+      summary: List generated monthly activity reports
+      responses:
+        '200':
+          description: Report list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items: { $ref: '#/components/schemas/MonthlyReport' }
+
+  /admin/reports/monthly/generate:
+    post:
+      tags: [Admin]
+      summary: Generate a monthly report on demand (async), emailed to admin via SMTP
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                month: { type: integer, minimum: 1, maximum: 12 }
+                year: { type: integer }
+      responses:
+        '202':
+          description: Report generation started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: { type: string }
+                  message: { type: string }
+
+  /admin/reports/monthly/task-status/{task_id}:
+    get:
+      tags: [Admin]
+      summary: Poll the status of a report-generation job
+      parameters: [{ $ref: '#/components/parameters/TaskId' }]
+      responses:
+        '200':
+          description: Task status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskStatus' }
+
+  /admin/reports/monthly/{report_id}/download:
+    get:
+      tags: [Admin]
+      summary: Download a generated monthly report PDF
+      parameters:
+        - in: path
+          name: report_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Report PDF
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        '404':
+          description: PDF not available
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------------
+  # COMMON
+  # ---------------------------------------------------------------------
+  /common/branches:
+    get:
+      tags: [Common]
+      summary: List reference branch names (used in registration/drive forms)
+      security: []
+      responses:
+        '200':
+          description: Branch list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  branches: { type: array, items: { type: string } }
+
+  /common/notifications:
+    get:
+      tags: [Common]
+      summary: List the current user's in-app notifications (bell icon)
+      responses:
+        '200':
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items: { $ref: '#/components/schemas/Notification' }
+                  unread_count: { type: integer }
+
+  /common/notifications/{notification_id}/read:
+    post:
+      tags: [Common]
+      summary: Mark a single notification as read
+      parameters:
+        - in: path
+          name: notification_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notification: { $ref: '#/components/schemas/Notification' }
+
+  /common/notifications/read-all:
+    post:
+      tags: [Common]
+      summary: Mark all of the current user's notifications as read
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { status: { type: string, example: ok } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT returned from /auth/login or /auth/register/*. Send as
+        `Authorization: Bearer <token>`.
+
+  parameters:
+    DriveId:
+      in: path
+      name: drive_id
+      required: true
+      schema: { type: integer }
+    ApplicationId:
+      in: path
+      name: application_id
+      required: true
+      schema: { type: integer }
+    CompanyId:
+      in: path
+      name: company_id
+      required: true
+      schema: { type: integer }
+    StudentId:
+      in: path
+      name: student_id
+      required: true
+      schema: { type: integer }
+    TaskId:
+      in: path
+      name: task_id
+      required: true
+      schema: { type: string }
+      description: Celery task ID returned by an async-triggering endpoint
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        field: { type: string, description: Present for field-level validation errors }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [admin, student, company] }
+        is_active: { type: boolean }
+        is_blacklisted: { type: boolean }
+        blacklist_reason: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    StudentProfile:
+      type: object
+      properties:
+        id: { type: integer }
+        roll_number: { type: string }
+        branch: { type: string }
+        graduation_year: { type: integer }
+        cgpa: { type: number }
+        phone: { type: string, nullable: true }
+        skills: { type: string, nullable: true }
+        resume_filename: { type: string, nullable: true }
+        user_id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        is_active: { type: boolean }
+        is_blacklisted: { type: boolean }
+
+    CompanyProfile:
+      type: object
+      properties:
+        id: { type: integer }
+        company_name: { type: string }
+        hr_contact_name: { type: string }
+        hr_contact_email: { type: string }
+        hr_phone: { type: string, nullable: true }
+        website: { type: string, nullable: true }
+        industry: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        approval_status: { type: string, enum: [pending, approved, rejected] }
+        user_id: { type: integer }
+        email: { type: string }
+        is_active: { type: boolean }
+        is_blacklisted: { type: boolean }
+
+    PlacementDrive:
+      type: object
+      properties:
+        id: { type: integer }
+        job_title: { type: string }
+        job_description: { type: string }
+        eligible_branches: { type: array, items: { type: string } }
+        min_cgpa: { type: number }
+        eligible_years: { type: array, items: { type: integer } }
+        package_lpa: { type: number, nullable: true }
+        location: { type: string, nullable: true }
+        application_deadline: { type: string, format: date }
+        drive_date: { type: string, format: date, nullable: true }
+        status: { type: string, enum: [pending, approved, rejected, closed] }
+        rejection_reason: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        company_id: { type: integer }
+        company_name: { type: string }
+        applicant_count: { type: integer }
+        is_eligible: { type: boolean, description: Only present on student-facing endpoints }
+        already_applied: { type: boolean, description: Only present on student-facing endpoints }
+
+    Application:
+      type: object
+      properties:
+        id: { type: integer }
+        status:
+          type: string
+          enum: [applied, shortlisted, interview_scheduled, selected, rejected]
+        applied_on: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        interview_datetime: { type: string, format: date-time, nullable: true }
+        remarks: { type: string, nullable: true }
+        has_offer_letter: { type: boolean }
+        drive: { $ref: '#/components/schemas/PlacementDrive' }
+        student: { $ref: '#/components/schemas/StudentProfile' }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: integer }
+        message: { type: string }
+        category: { type: string, enum: [info, success, warning, danger] }
+        is_read: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    MonthlyReport:
+      type: object
+      properties:
+        id: { type: integer }
+        month: { type: integer }
+        year: { type: integer }
+        drives_conducted: { type: integer }
+        students_applied: { type: integer }
+        students_selected: { type: integer }
+        pdf_path: { type: string, nullable: true }
+        generated_at: { type: string, format: date-time }
+
+    TaskStatus:
+      type: object
+      properties:
+        task_id: { type: string }
+        state: { type: string, enum: [PENDING, STARTED, SUCCESS, FAILURE] }
+        result:
+          type: object
+          description: Present when state = SUCCESS; shape depends on the task
+        error: { type: string, description: Present when state = FAILURE }
