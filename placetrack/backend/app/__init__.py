@@ -13,6 +13,7 @@ from app.config import config_by_name, INSTANCE_DIR, FRONTEND_STATIC_DIR, FRONTE
 from app.extensions import db, jwt, cache, cors, migrate
 
 
+
 def create_app(env_name=None):
     env_name = env_name or os.environ.get("FLASK_ENV", "development")
     config_cls = config_by_name.get(env_name, config_by_name["development"])
