@@ -13,6 +13,7 @@ from app.utils.validators import (
     validate_year,
 )
 
+
 auth_bp = Blueprint("auth", __name__)
 
 
