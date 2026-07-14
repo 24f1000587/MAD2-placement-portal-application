@@ -367,3 +367,5 @@ class MonthlyReport(db.Model):
             "pdf_path": self.pdf_path,
             "generated_at": self.generated_at.isoformat() if self.generated_at else None,
         }
+
+        
