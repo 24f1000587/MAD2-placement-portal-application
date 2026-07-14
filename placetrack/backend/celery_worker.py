@@ -7,6 +7,7 @@ On Windows, add `--pool=solo` to the worker command.
 from app import create_app
 from app.celery_app import init_celery
 
+
 flask_app = create_app()
 celery = init_celery(flask_app)
 
