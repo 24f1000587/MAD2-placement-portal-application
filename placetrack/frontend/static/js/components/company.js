@@ -11,7 +11,8 @@ const BRANCH_OPTIONS = [
 ];
 
 /* ---------------------------------------------------------------------------
- * Dashboard
+ * Dashboard 
+
  * ------------------------------------------------------------------------- */
 export const CompanyDashboard = {
   name: 'CompanyDashboard',
