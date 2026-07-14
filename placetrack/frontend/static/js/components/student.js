@@ -7,6 +7,7 @@ const { reactive, ref, onMounted, computed } = Vue;
 
 /* ---------------------------------------------------------------------------
  * Dashboard
+
  * ------------------------------------------------------------------------- */
 export const StudentDashboard = {
   name: 'StudentDashboard',
