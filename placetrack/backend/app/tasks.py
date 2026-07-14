@@ -31,6 +31,7 @@ from app.utils.pdf_generator import generate_monthly_report_pdf
 # ---------------------------------------------------------------------------
 # (a) Daily deadline reminders
 # ---------------------------------------------------------------------------
+
 @celery.task(name="app.tasks.send_daily_deadline_reminders")
 def send_daily_deadline_reminders():
     """For every open drive whose deadline is within
