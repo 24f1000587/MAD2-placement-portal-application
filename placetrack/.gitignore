@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Environment
+backend/.env
+
+# Database
+backend/instance/*.db
+backend/instance/*.sqlite3
+backend/instance/notifications.log
+
+# Generated files (resumes, exports, reports, offer letters)
+backend/instance/uploads/resumes/*
+!backend/instance/uploads/resumes/.gitkeep
+backend/instance/exports/csv/*
+!backend/instance/exports/csv/.gitkeep
+backend/instance/exports/reports/*
+!backend/instance/exports/reports/.gitkeep
+backend/instance/exports/offer_letters/*
+!backend/instance/exports/offer_letters/.gitkeep
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
