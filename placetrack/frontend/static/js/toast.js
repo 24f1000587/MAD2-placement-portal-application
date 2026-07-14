@@ -4,6 +4,7 @@ export const toastStore = reactive({ items: [] });
 
 let counter = 0;
 
+
 export function pushToast(message, variant = 'success') {
   const id = ++counter;
   toastStore.items.push({ id, message, variant });
