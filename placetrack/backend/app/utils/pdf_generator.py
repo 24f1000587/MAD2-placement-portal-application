@@ -1,10 +1,4 @@
-"""
-PDF generation utilities (optional feature: "Well-designed PDF reports for
-Monthly activity reports" + dummy offer letter generator).
 
-Uses fpdf2, a pure-Python library, so it needs no system-level dependencies
-and installs cleanly with `pip install fpdf2` on any machine.
-"""
 import calendar
 import os
 from datetime import datetime

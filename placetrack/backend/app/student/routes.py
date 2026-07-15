@@ -30,9 +30,7 @@ def _current_student() -> StudentProfile:
     )
 
 
-# ---------------------------------------------------------------------------
 # Profile
-# ---------------------------------------------------------------------------
 @student_bp.get("/profile")
 @role_required("student")
 def get_profile():
@@ -104,9 +102,7 @@ def download_resume():
     )
 
 
-# ---------------------------------------------------------------------------
 # Dashboard
-# ---------------------------------------------------------------------------
 @student_bp.get("/dashboard")
 @role_required("student")
 def dashboard():
@@ -134,9 +130,7 @@ def dashboard():
     )
 
 
-# ---------------------------------------------------------------------------
 # Browse drives
-# ---------------------------------------------------------------------------
 def _serialize_open_drives():
     """Cached base dataset: every currently-open, approved drive."""
     from datetime import date
@@ -198,9 +192,7 @@ def drive_detail(drive_id):
     return jsonify(drive=data)
 
 
-# ---------------------------------------------------------------------------
 # Apply
-# ---------------------------------------------------------------------------
 @student_bp.post("/drives/<int:drive_id>/apply")
 @role_required("student")
 def apply_to_drive(drive_id):
@@ -227,9 +219,7 @@ def apply_to_drive(drive_id):
     return jsonify(application=application.to_dict()), 201
 
 
-# ---------------------------------------------------------------------------
 # My applications / history
-# ---------------------------------------------------------------------------
 @student_bp.get("/applications")
 @role_required("student")
 def my_applications():
@@ -263,9 +253,7 @@ def download_offer_letter(application_id):
     return send_from_directory(current_app.config["OFFER_LETTER_DIR"], filename, as_attachment=True)
 
 
-# ---------------------------------------------------------------------------
 # Async CSV export (Celery)
-# ---------------------------------------------------------------------------
 @student_bp.post("/export")
 @role_required("student")
 def trigger_export():

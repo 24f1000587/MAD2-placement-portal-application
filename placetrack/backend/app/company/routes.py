@@ -32,9 +32,8 @@ def _invalidate_open_drives_cache():
     cache.delete("cache:open_drives")
 
 
-# ---------------------------------------------------------------------------
+
 # Profile
-# ---------------------------------------------------------------------------
 @company_bp.get("/profile")
 @role_required("company")
 def get_profile():
@@ -54,9 +53,7 @@ def update_profile():
     return jsonify(profile=company.to_dict())
 
 
-# ---------------------------------------------------------------------------
 # Dashboard
-# ---------------------------------------------------------------------------
 @company_bp.get("/dashboard")
 @role_required("company")
 def dashboard():
@@ -81,9 +78,7 @@ def dashboard():
     )
 
 
-# ---------------------------------------------------------------------------
 # Drives
-# ---------------------------------------------------------------------------
 @company_bp.post("/drives")
 @role_required("company")
 @company_must_be_approved
@@ -192,9 +187,7 @@ def close_drive(drive_id):
     return jsonify(drive=drive.to_dict())
 
 
-# ---------------------------------------------------------------------------
 # Applicants
-# ---------------------------------------------------------------------------
 @company_bp.get("/drives/<int:drive_id>/applicants")
 @role_required("company")
 def drive_applicants(drive_id):
@@ -263,9 +256,7 @@ def update_application_status(application_id):
     return jsonify(application=application.to_dict())
 
 
-# ---------------------------------------------------------------------------
 # Offer letter (optional feature)
-# ---------------------------------------------------------------------------
 @company_bp.post("/applications/<int:application_id>/offer-letter")
 @role_required("company")
 def generate_offer_letter(application_id):

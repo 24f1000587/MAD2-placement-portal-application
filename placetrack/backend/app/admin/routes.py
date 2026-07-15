@@ -33,9 +33,8 @@ def _invalidate_open_drives_cache():
     cache.delete("cache:open_drives")
 
 
-# ---------------------------------------------------------------------------
 # Dashboard
-# ---------------------------------------------------------------------------
+
 @admin_bp.get("/dashboard")
 @role_required("admin")
 def dashboard():
@@ -75,9 +74,7 @@ def dashboard():
     return jsonify(payload)
 
 
-# ---------------------------------------------------------------------------
 # Companies
-# ---------------------------------------------------------------------------
 @admin_bp.get("/companies")
 @role_required("admin")
 def list_companies():
@@ -221,9 +218,7 @@ def deactivate_student(student_id):
     return jsonify(student=student.to_dict())
 
 
-# ---------------------------------------------------------------------------
 # Drives
-# ---------------------------------------------------------------------------
 @admin_bp.get("/drives")
 @role_required("admin")
 def list_drives():
@@ -268,9 +263,7 @@ def reject_drive(drive_id):
     return jsonify(drive=drive.to_dict())
 
 
-# ---------------------------------------------------------------------------
 # Global search
-# ---------------------------------------------------------------------------
 @admin_bp.get("/search")
 @role_required("admin")
 def global_search():
@@ -300,9 +293,7 @@ def global_search():
     )
 
 
-# ---------------------------------------------------------------------------
 # Monthly reports (optional feature: PDF reports)
-# ---------------------------------------------------------------------------
 @admin_bp.get("/reports/monthly")
 @role_required("admin")
 def list_reports():

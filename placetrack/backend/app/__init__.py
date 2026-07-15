@@ -3,10 +3,7 @@ import os
 from flask import Flask, send_from_directory, render_template
 from dotenv import load_dotenv
 
-# MUST run before `app.config` is imported: Config's class attributes (e.g.
-# MAIL_SERVER = os.environ.get(...)) are evaluated the instant that module
-# is imported, so .env has to be loaded into os.environ first or every
-# setting silently falls back to its hardcoded default.
+
 load_dotenv()
 
 from app.config import config_by_name, INSTANCE_DIR, FRONTEND_STATIC_DIR, FRONTEND_TEMPLATE_DIR
@@ -20,9 +17,7 @@ def create_app(env_name=None):
 
     os.makedirs(INSTANCE_DIR, exist_ok=True)
 
-    # The UI lives in the sibling frontend/ directory (Jinja2 is used only
-    # as the CDN entry-point shell there; every other Vue file is served as
-    # a static asset from frontend/static/).
+    
     app = Flask(
         __name__,
         static_folder=FRONTEND_STATIC_DIR,
@@ -31,7 +26,6 @@ def create_app(env_name=None):
     )
     app.config.from_object(config_cls)
 
-    # Make sure upload / export directories exist for a fresh checkout.
     for path in (
         app.config["RESUME_UPLOAD_DIR"],
         app.config["CSV_EXPORT_DIR"],
