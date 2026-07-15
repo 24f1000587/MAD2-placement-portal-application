@@ -143,7 +143,7 @@ Open **http://localhost:5000** in your browser.
 
 | Role    | Email                     | Password      | Notes                                   |
 |---------|----------------------------|---------------|------------------------------------------|
-| Admin   | `admin@placetrack.edu`     | `Admin@1234`  | Pre-seeded, no registration flow exists |
+| Admin   | `black.thief05@gmail.com`     | `Admin@1234`  | Pre-seeded, no registration flow exists |
 | Student | (register from the UI)     | —             | `/register/student`                     |
 | Company | (register from the UI)     | —             | `/register/company`, needs admin approval before posting drives |
 
